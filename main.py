@@ -44,10 +44,10 @@ def show_img_grid(l, nx=4, ny=None):
 
 def train(model, dataloader, optimizer, logging=False):
     model.train()
-    gpu = torch.cuda.device(0)
+    # gpu = torch.cuda.device(0)
     loss_history = []
     for i, batch in enumerate(dataloader):
-        x, y = batch[0].to(gpu), batch[1].to(gpu)
+        x, y = batch[0], batch[1]
         optimizer.zero_grad()
         outputs = model(x)
         loss = ComboLoss()(outputs, y)
@@ -73,7 +73,7 @@ show_img_grid(x)
 unet_model = UNet(1, 1)
 optimizer = optim.Adam(unet_model.parameters(), lr=0.001)
 train_loss = []
-for e in 1:
+for e in range(1):
     unet_model, loss = train(unet_model, dl, optimizer, True)
     train_loss.append(loss)
     torch.save(unet_model.state_dict(), "last.pt")
