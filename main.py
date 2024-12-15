@@ -11,18 +11,19 @@ from loss import ComboLoss, SoftDiceLoss
 import torch.nn as nn
 import gc
 import torchvision.transforms.functional as F
+import torchvision.transforms as tf
 import cv2
 import matplotlib.pyplot as plt
 
 
 
-def mask_to_tensor(sparse_list, final_size=(640, 640)):
-    mask = np.zeros(final_size)
+def mask_to_tensor(sparse_list, final_size=(256, 256)):
+    mask = np.zeros((640, 640)) #original size
     indices = np.asarray(sparse_list, np.int32)
     indices = indices.reshape((int(indices.size/2), 2))
 
     cv2.fillPoly(mask, [indices], 1)
-    return torch.tensor(mask, dtype=torch.float32)
+    return nn.functional.interpolate(torch.tensor(mask, dtype=torch.float32).unsqueeze(0).unsqueeze(0), size=final_size, mode='bilinear', align_corners=False).squeeze(0)
 
 
 def show_img(tensor):  # grayscale
@@ -51,7 +52,7 @@ def train(model, dataloader, optimizer, logging=False):
         x, y = batch[0].to(device='cuda'), batch[1].to(device='cuda')
         optimizer.zero_grad()
         outputs = model(x)
-        loss = SoftDiceLoss()(outputs, y)
+        loss = ComboLoss()(outputs, y)
         loss_history.append(loss)
         loss.backward()
         optimizer.step()
@@ -68,7 +69,7 @@ def validate(model, dataloader, logging=False):
         with torch.no_grad():
             x, y = batch[0].to(device='cuda'), batch[1].to(device='cuda')
             outputs = model(x)
-            loss = SoftDiceLoss()(outputs, y)
+            loss = ComboLoss()(outputs, y)
             loss_history.append(loss)
             if i % 10 == 0 and logging:
                 print(i, loss.item().detach())
@@ -77,9 +78,9 @@ def validate(model, dataloader, logging=False):
 
 if __name__ == '__main__':
     SEED = 42
-    BATCH = 10
-    EPOCHS = 10
-    load = True
+    BATCH = 64
+    EPOCHS = 50
+    load = False
     LR = 0.001
     df = pd.read_json("_annotation.json")
     ds = SegmentationDataset("data", annotations=df,
@@ -96,7 +97,7 @@ if __name__ == '__main__':
     
     unet_model = UNet(1, 1).to(device="cuda", dtype=torch.float32)
     if load:
-        unet_model.load_state_dict(torch.load("30 epochs.pt"))
+        unet_model.load_state_dict(torch.load("last.pt"))
     #unet_model.eval()
     #show_img_grid([x[1], unet_model(x)[1], y[1]])
 
