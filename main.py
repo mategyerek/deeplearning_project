@@ -1,18 +1,19 @@
 import pandas as pd
 import numpy as np
 import math
-
+from tqdm import tqdm
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 import torch.optim as optim
 from SegmentationDataset import SegmentationDataset
 from UNet import UNet
-from loss import ComboLoss
-
+from loss import ComboLoss, SoftDiceLoss
+import torch.nn as nn
+import gc
 import torchvision.transforms.functional as F
 import cv2
-
 import matplotlib.pyplot as plt
+
 
 
 def mask_to_tensor(sparse_list, final_size=(640, 640)):
@@ -21,7 +22,7 @@ def mask_to_tensor(sparse_list, final_size=(640, 640)):
     indices = indices.reshape((int(indices.size/2), 2))
 
     cv2.fillPoly(mask, [indices], 1)
-    return torch.tensor(mask)
+    return torch.tensor(mask, dtype=torch.float32)
 
 
 def show_img(tensor):  # grayscale
@@ -44,36 +45,77 @@ def show_img_grid(l, nx=4, ny=None):
 
 def train(model, dataloader, optimizer, logging=False):
     model.train()
-    # gpu = torch.cuda.device(0)
+
     loss_history = []
-    for i, batch in enumerate(dataloader):
-        x, y = batch[0], batch[1]
+    for i, batch in enumerate(tqdm(dataloader)):
+        x, y = batch[0].to(device='cuda'), batch[1].to(device='cuda')
         optimizer.zero_grad()
         outputs = model(x)
-        loss = ComboLoss()(outputs, y)
+        loss = SoftDiceLoss()(outputs, y)
         loss_history.append(loss)
         loss.backward()
         optimizer.step()
         if i % 10 == 0 and logging:
-            print(i, loss.item())
-    return model, np.average(loss_history)
+            print(i, loss.item().detach())
+        del x, y, loss, outputs
+    return torch.mean(torch.tensor(loss_history))
 
+def validate(model, dataloader, logging=False):
+    model.eval()
 
-df = pd.read_json("_annotation.json")
-ds = SegmentationDataset("data", annotations=df,
-                         target_transform=mask_to_tensor)
+    loss_history = []
+    for i, batch in tqdm(enumerate(dataloader)):
+        with torch.no_grad():
+            x, y = batch[0].to(device='cuda'), batch[1].to(device='cuda')
+            outputs = model(x)
+            loss = SoftDiceLoss()(outputs, y)
+            loss_history.append(loss)
+            if i % 10 == 0 and logging:
+                print(i, loss.item().detach())
+            del x, y, loss, outputs
+    return torch.mean(torch.tensor(loss_history))
 
-dl = DataLoader(ds, 12)
+if __name__ == '__main__':
+    SEED = 42
+    BATCH = 10
+    EPOCHS = 10
+    load = True
+    LR = 0.001
+    df = pd.read_json("_annotation.json")
+    ds = SegmentationDataset("data", annotations=df,
+                            target_transform=mask_to_tensor)
+    
+    trainset, valset, testset = random_split(ds, [0.7, 0.15, 0.15], generator=torch.Generator().manual_seed(SEED))
 
-"""x, y = next(iter(dl))
+    train_loader = DataLoader(trainset, BATCH, num_workers=1, pin_memory=True, prefetch_factor=10, persistent_workers=True)
+    val_loader = DataLoader(valset, BATCH, num_workers=1, pin_memory=True, prefetch_factor=5)
+    test_loader = DataLoader(testset, BATCH, num_workers=1, pin_memory=True, prefetch_factor=5)
 
-show_img_grid(x)
-"""
+    x, y = next(iter(train_loader))
 
-unet_model = UNet(1, 1)
-optimizer = optim.Adam(unet_model.parameters(), lr=0.001)
-train_loss = []
-for e in range(1):
-    unet_model, loss = train(unet_model, dl, optimizer, True)
-    train_loss.append(loss)
-    torch.save(unet_model.state_dict(), "last.pt")
+    
+    unet_model = UNet(1, 1).to(device="cuda", dtype=torch.float32)
+    if load:
+        unet_model.load_state_dict(torch.load("30 epochs.pt"))
+    #unet_model.eval()
+    #show_img_grid([x[1], unet_model(x)[1], y[1]])
+
+    optimizer = optim.Adam(unet_model.parameters(), lr=LR)
+    train_loss = []
+    val_loss = []
+    for e in range(EPOCHS):
+        print("Epoch ", e)
+        print("Training...")
+        loss = train(unet_model, train_loader, optimizer)
+        train_loss.append(loss)
+        torch.save(unet_model.state_dict(), "last.pt")
+        print("Training loss: ", loss)
+        gc.collect()
+        torch.cuda.empty_cache()
+        print("Validating...")
+        loss = validate(unet_model, val_loader)
+        val_loss.append(loss)
+        print("Validation loss: ", loss)
+    plt.plot(range(EPOCHS), train_loss)
+    plt.plot(range(EPOCHS), val_loss)
+    plt.show()

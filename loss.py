@@ -1,6 +1,3 @@
-# Source: https://github.com/knottwill/UNet-Small/blob/main/src/loss.py
-# Was licensed under the MIT license
-
 """!@file losses.py
 
 @brief Custom loss functions for training the model
@@ -48,13 +45,11 @@ class ComboLoss(nn.Module):
         """
         # calculate soft-dice coefficient
         intersection = (probs * labels).sum()
-        dice = (2.0 * intersection + self.smooth) / \
-            (probs.sum() + labels.sum() + self.smooth)
+        dice = (2.0 * intersection + self.smooth) / (probs.sum() + labels.sum() + self.smooth)
 
         # calculate modified cross entropy loss
         probs = torch.clamp(probs, self.eps, 1.0 - self.eps)
-        modified_bce = -(self.beta * labels * torch.log(probs) +
-                         (1 - self.beta) * (1 - labels) * torch.log(1 - probs)).mean()
+        modified_bce = -(self.beta * labels * torch.log(probs) + (1 - self.beta) * (1 - labels) * torch.log(1 - probs)).mean()
 
         # calculate combo loss
         combo = self.alpha * modified_bce - (1 - self.alpha) * dice
