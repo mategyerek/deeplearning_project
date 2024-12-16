@@ -58,7 +58,7 @@ def validate(model, dataloader, loss_fn, logging=False):
 if __name__ == '__main__':
     SEED = 42
     BATCH = 64
-    EPOCHS = 150
+    EPOCHS = 200
     loss_fn = MLoss()
     load = False
     LR = 0.01
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     if load:
         unet_model.load_state_dict(torch.load("last.pt"))
 
-    optimizer = optim.Adam(unet_model.parameters(), lr=LR)
+    optimizer = optim.Adam(unet_model.parameters(), lr=LR, weight_decay=0.0001)
     train_loss = []
     val_loss = []
     train_iou = []

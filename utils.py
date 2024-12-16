@@ -19,7 +19,7 @@ def mask_to_tensor(sparse_list, final_size=(256, 256)):
 
 
 def iou(y1, y2):
-    return (y1 * y2).sum() / (y1 + y2).sum()
+    return 2 * (y1 * y2).sum() / (y1 + y2).sum()
 
 
 def show_img(tensor):  # grayscale
