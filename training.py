@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import DataLoader, random_split
 import torch.optim as optim
 import torch.nn as nn
-import torchvision.transforms.functional as F
+
 import torchvision.transforms as tf
 
 from SegmentationDataset import SegmentationDataset
@@ -26,7 +26,9 @@ def train(model, dataloader, optimizer, loss_fn, logging=False):
         optimizer.zero_grad()
         outputs = model(x)
         loss = loss_fn(outputs, y)
+        iou_ = iou(outputs, y)
         loss_history.append(loss)
+        iou_history.append(iou_)
         loss.backward()
         optimizer.step()
         if i % 10 == 0 and logging:
@@ -44,7 +46,9 @@ def validate(model, dataloader, loss_fn, logging=False):
             x, y = batch[0].to(device='cuda'), batch[1].to(device='cuda')
             outputs = model(x)
             loss = loss_fn(outputs, y)
+            iou_ = iou(outputs, y)
             loss_history.append(loss)
+            iou_history.append(iou_)
             if i % 10 == 0 and logging:
                 print(i, loss.item().detach())
             del x, y, loss, outputs
@@ -54,10 +58,10 @@ def validate(model, dataloader, loss_fn, logging=False):
 if __name__ == '__main__':
     SEED = 42
     BATCH = 64
-    EPOCHS = 2
+    EPOCHS = 150
     loss_fn = MLoss()
     load = False
-    LR = 0.001
+    LR = 0.01
     df = pd.read_json("_annotation.json")
     ds = SegmentationDataset("data", annotations=df,
                              target_transform=mask_to_tensor)
@@ -91,6 +95,7 @@ if __name__ == '__main__':
         train_iou.append(iou_)
         torch.save(unet_model.state_dict(), "last.pt")
         print("Training loss: ", loss)
+        print("Training iou: ", iou_)
         gc.collect()
         torch.cuda.empty_cache()
         print("Validating...")
@@ -98,7 +103,8 @@ if __name__ == '__main__':
         val_loss.append(loss)
         val_iou.append(iou_)
         print("Validation loss: ", loss)
-    plt.subplot(2, 1, 1)
+        print("Validation iou: ", iou_)
+    plt.subplot(1, 2, 1)
     plt.title("Loss against epoch")
     plt.plot(range(EPOCHS), train_loss, label="training")
     plt.plot(range(EPOCHS), val_loss, label="validation")

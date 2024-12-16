@@ -107,7 +107,7 @@ class MLoss(nn.Module):
         @param smooth: smoothing term
         @param eps: small constant to prevent numerical issues from log(probs)
         """
-        super(ComboLoss, self).__init__()
+        super(MLoss, self).__init__()
         self.alpha = alpha
         self.beta = beta
         self.smooth = smooth

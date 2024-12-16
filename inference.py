@@ -24,5 +24,4 @@ unet_model.eval()
 show_img_grid([x[0], unet_model(x)[0], y[0],
                x[1], unet_model(x)[1], y[1],
                x[2], unet_model(x)[2], y[2],
-               x[3], unet_model(x)[3], y[3],
-               x[4], unet_model(x)[4], y[4]])
+               x[3], unet_model(x)[3], y[3]], 3, 4)

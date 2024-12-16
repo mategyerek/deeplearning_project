@@ -3,6 +3,7 @@ import math
 
 import torch.nn as nn
 import torch
+import torchvision.transforms.functional as F
 
 import matplotlib.pyplot as plt
 import cv2
