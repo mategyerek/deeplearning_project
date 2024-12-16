@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 
-def mask_to_tensor(sparse_list, final_size=(512, 512)):
+def mask_to_tensor(sparse_list, final_size=(256, 256)):
     mask = np.zeros((640, 640))  # original size
     indices = np.asarray(sparse_list, np.int32)
     indices = indices.reshape((int(indices.size/2), 2))
@@ -41,4 +41,5 @@ def show_img_grid(l, nx=4, ny=None):
         plt.subplot(ny, nx, idx + 1)
         plt.axis('off')
         show_img(tensor)
+    plt.show()
     plt.savefig("examples.png")

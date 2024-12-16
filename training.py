@@ -62,8 +62,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 torch.manual_seed(0)
 if __name__ == '__main__':
     SEED = 42
-    BATCH = 16
-    EPOCHS = 15
+    BATCH = 64
+    EPOCHS = 10
     
     load = False
     lr = 0.001
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
 
         if load:
-            unet_model.load_state_dict(torch.load("last.pt"))
+            unet_model.load_state_dict(torch.load("512lr0.001 wd0 alpha1 epochs15.pt"))
 
         optimizer = optim.Adam(unet_model.parameters(), lr=lr, weight_decay=wd)
         train_loss = []
@@ -114,6 +114,7 @@ if __name__ == '__main__':
             train_loss.append(loss)
             train_iou.append(iou_)
             torch.save(unet_model.state_dict(), f'512lr{lr} wd{wd} alpha{alpha} epochs{EPOCHS}.pt')
+            torch.save(unet_model.state_dict(), 'last.pt')
             print("Training loss: ", loss)
             print("Training iou: ", iou_)
             gc.collect()

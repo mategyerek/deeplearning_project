@@ -1,5 +1,6 @@
 # Source: https://github.com/knottwill/UNet-Small/blob/main/src/model.py
 # Was licensed under the MIT license
+# Not used in the final code
 
 """!@file model.py
 
