@@ -16,7 +16,9 @@ import torch
 from torch import nn
 
 
-class UNet(nn.Module):
+
+
+class UNet_small(nn.Module):
     """!
     @brief Small UNet model for segmentation
 
@@ -133,3 +135,4 @@ class UNet(nn.Module):
         probs = torch.sigmoid(logits)
 
         return probs
+

@@ -5,6 +5,7 @@
 
 import torch
 from torch import nn
+from segmentation_models_pytorch.losses import DiceLoss
 
 
 class ComboLoss(nn.Module):
@@ -134,3 +135,22 @@ class MLoss(nn.Module):
         combo = self.alpha * modified_bce + (1 - self.alpha) * (1 - dice)
 
         return combo
+
+
+class CombinedLoss(nn.Module):
+
+
+    def __init__(self, alpha=1):
+        """!
+        @param alpha: weight of the modified cross entropy loss compared to soft dice loss.
+        @param beta: weight for controlling penalization of false positives/negatives within
+                    the modified cross entropy loss.
+        @param smooth: smoothing term
+        @param eps: small constant to prevent numerical issues from log(probs)
+        """
+        super(CombinedLoss, self).__init__()
+        self.alpha = alpha
+
+    def forward(self, probs, labels):
+        return self.alpha * torch.nn.BCELoss()(probs, labels) + (2 - self.alpha) *DiceLoss(mode='binary')(probs, labels) 
+

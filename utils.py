@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 
-def mask_to_tensor(sparse_list, final_size=(256, 256)):
+def mask_to_tensor(sparse_list, final_size=(512, 512)):
     mask = np.zeros((640, 640))  # original size
     indices = np.asarray(sparse_list, np.int32)
     indices = indices.reshape((int(indices.size/2), 2))
@@ -17,9 +17,13 @@ def mask_to_tensor(sparse_list, final_size=(256, 256)):
     cv2.fillPoly(mask, [indices], 1)
     return nn.functional.interpolate(torch.tensor(mask, dtype=torch.float32).unsqueeze(0).unsqueeze(0), size=final_size, mode='bilinear', align_corners=False).squeeze(0)
 
+def iou_score(prediction, truth, treshold=0.5):
+    prediction = prediction > treshold
+    tp = torch.logical_and(prediction, truth).sum()
+    fp = torch.logical_and(prediction, torch.logical_not(truth)).sum()
+    fn = torch.logical_and(torch.logical_not(prediction), truth).sum()
+    return tp / (tp + fp + fn)
 
-def iou(y1, y2):
-    return 2 * (y1 * y2).sum() / (y1 + y2).sum()
 
 
 def show_img(tensor):  # grayscale
@@ -37,4 +41,4 @@ def show_img_grid(l, nx=4, ny=None):
         plt.subplot(ny, nx, idx + 1)
         plt.axis('off')
         show_img(tensor)
-    plt.show()
+    plt.savefig("examples.png")
